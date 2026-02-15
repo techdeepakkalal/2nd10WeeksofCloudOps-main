@@ -2,18 +2,27 @@ version: "3.8"
 
 services:
   mysql:
-    image: 117601052645.dkr.ecr.ap-south-1.amazonaws.com/mysql-db
+    image: 117601052645.dkr.ecr.ap-south-1.amazonaws.com/mysql-db:latest
     container_name: mysql-db
     environment:
       MYSQL_ROOT_PASSWORD: Cloud122
       MYSQL_DATABASE: test
       MYSQL_USER: admin
       MYSQL_PASSWORD: Devops123
+    ports:
+      - "3306:3306"
     networks:
       - appnet
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   backend:
-    image: 117601052645.dkr.ecr.ap-south-1.amazonaws.com/backend-app
+    image: 117601052645.dkr.ecr.ap-south-1.amazonaws.com/backend-app:latest
     container_name: backend-app
     ports:
       - "84:80"
@@ -29,7 +38,7 @@ services:
       - appnet
 
   frontend:
-    image: 117601052645.dkr.ecr.ap-south-1.amazonaws.com/frontend-app
+    image: 117601052645.dkr.ecr.ap-south-1.amazonaws.com/frontend-app:latest
     container_name: frontend-app
     ports:
       - "80:80"
@@ -37,6 +46,9 @@ services:
       - backend
     networks:
       - appnet
+
+volumes:
+  mysql_data:
 
 networks:
   appnet:
