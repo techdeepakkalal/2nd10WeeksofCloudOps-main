@@ -1,4 +1,4 @@
-name: Full Stack CI/CD Pipeline
+name: Full Stack Deploy
 
 on:
   push:
@@ -22,39 +22,35 @@ jobs:
 
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} |
-          docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
+          | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
 
-      # Build & Push MySQL
-      - name: Build & Push MySQL Image
-        run: |
-          docker build -t mysql-db ./mysql
-          docker tag mysql-db:latest ${{ secrets.ECR_REGISTRY }}/mysql-db:latest
-          docker push ${{ secrets.ECR_REGISTRY }}/mysql-db:latest
-
-      # Build & Push Backend
       - name: Build & Push Backend Image
         run: |
           docker build -t backend-app ./backend
           docker tag backend-app:latest ${{ secrets.ECR_REGISTRY }}/backend-app:latest
           docker push ${{ secrets.ECR_REGISTRY }}/backend-app:latest
 
-      # Build & Push Frontend
       - name: Build & Push Frontend Image
         run: |
           docker build -t frontend-app ./client
           docker tag frontend-app:latest ${{ secrets.ECR_REGISTRY }}/frontend-app:latest
           docker push ${{ secrets.ECR_REGISTRY }}/frontend-app:latest
 
-      # Deploy on EC2 Root
-      - name: Deploy on EC2 using Docker Compose
+      - name: Build & Push MySQL Image
+        run: |
+          docker build -t mysql-db ./mysql
+          docker tag mysql-db:latest ${{ secrets.ECR_REGISTRY }}/mysql-db:latest
+          docker push ${{ secrets.ECR_REGISTRY }}/mysql-db:latest
+
+      - name: Deploy on EC2
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: root
+          username: ec2-user
           key: ${{ secrets.EC2_KEY }}
           script: |
-            cd /root/2nd10WeeksofCloudOps-main
+            cd /home/ec2-user/app
             docker-compose down
             docker-compose pull
             docker-compose up -d
