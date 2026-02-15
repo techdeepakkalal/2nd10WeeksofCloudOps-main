@@ -50,8 +50,13 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_KEY }}
           script: |
-            cd /home/ec2-user/app
-            docker-compose down
-            docker-compose pull
-            docker-compose up -d
+          cd /home/ec2-user/app
+
+          echo "Logging into ECR..."
+          aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+
+          docker-compose down
+          docker-compose pull
+          docker-compose up -d
+
 
