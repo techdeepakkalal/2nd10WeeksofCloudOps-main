@@ -1,4 +1,4 @@
-name: Full Stack Deploy
+name: Build-Push-Deploy
 
 on:
   push:
@@ -10,39 +10,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ✅ Step 1: Checkout Repo
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      # ✅ Step 2: Configure AWS Credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ap-south-1
 
+      # ✅ Step 3: Login to Amazon ECR
       - name: Login to Amazon ECR
-        run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-          | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+        uses: aws-actions/amazon-ecr-login@v1
 
+      # ✅ Step 4: Build & Push Backend Image
       - name: Build & Push Backend Image
         run: |
           docker build -t backend-app ./backend
           docker tag backend-app:latest ${{ secrets.ECR_REGISTRY }}/backend-app:latest
           docker push ${{ secrets.ECR_REGISTRY }}/backend-app:latest
 
+      # ✅ Step 5: Build & Push Frontend Image
       - name: Build & Push Frontend Image
         run: |
           docker build -t frontend-app ./client
           docker tag frontend-app:latest ${{ secrets.ECR_REGISTRY }}/frontend-app:latest
           docker push ${{ secrets.ECR_REGISTRY }}/frontend-app:latest
 
+      # ✅ Step 6: Build & Push MySQL Image
       - name: Build & Push MySQL Image
         run: |
           docker build -t mysql-db ./mysql
           docker tag mysql-db:latest ${{ secrets.ECR_REGISTRY }}/mysql-db:latest
           docker push ${{ secrets.ECR_REGISTRY }}/mysql-db:latest
 
+      # ✅ Step 7: Deploy on EC2 using SSH
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v0.1.7
         with:
@@ -50,13 +55,20 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_KEY }}
           script: |
-          cd /home/ec2-user/app
+            echo "✅ Logging into ECR from EC2..."
+            aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
 
-          echo "Logging into ECR..."
-          aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+            echo "✅ Moving to app directory..."
+            cd /home/ec2-user/app
 
-          docker-compose down
-          docker-compose pull
-          docker-compose up -d
+            echo "✅ Stopping old containers..."
+            docker-compose down
 
+            echo "✅ Pulling latest images from ECR..."
+            docker-compose pull
+
+            echo "✅ Starting containers..."
+            docker-compose up -d
+
+            echo "🎉 Deployment Successful!"
 
