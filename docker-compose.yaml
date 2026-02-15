@@ -1,51 +1,44 @@
-version: "3"
+version: "3.8"
+
 services:
-  frontend:
-    build:
-      context: ./client
-      dockerfile: Dockerfile
-    container_name: frontend-app
-    ports:
-      - "80:80"
+  mysql:
+    image: 117601052645.dkr.ecr.ap-south-1.amazonaws.com/mysql-db
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: Cloud122
+      MYSQL_DATABASE: test
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: Devops123
     networks:
       - appnet
-    depends_on:
-      - backend
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: 117601052645.dkr.ecr.ap-south-1.amazonaws.com/backend-app
     container_name: backend-app
     ports:
       - "84:80"
     environment:
-      - DB_HOST=mysql
-      - DB_USERNAME=admin
-      - DB_PASSWORD=Devops123
-      - DB_PORT=3306
-    networks:
-      - appnet
+      DB_HOST: mysql-db
+      DB_USERNAME: admin
+      DB_PASSWORD: Devops123
+      DB_PORT: 3306
     depends_on:
-      - mysql
-
-  mysql:
-    build:
-      context: ./mysql
-      dockerfile: Dockerfile
-    container_name: mysql-db
-    environment:
-      - MYSQL_ROOT_PASSWORD=Cloud122
-      - MYSQL_DATABASE=test
-      - MYSQL_USER=admin
-      - MYSQL_PASSWORD=Devops123
-    ports:
-      - "3306:3306"
+      mysql:
+        condition: service_healthy
     networks:
       - appnet
-    # volumes:
-    #   - ./mysql_data:/var/lib/mysql
+
+  frontend:
+    image: 117601052645.dkr.ecr.ap-south-1.amazonaws.com/frontend-app
+    container_name: frontend-app
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - appnet
 
 networks:
   appnet:
     driver: bridge
+
